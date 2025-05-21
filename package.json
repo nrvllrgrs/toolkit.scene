@@ -1,0 +1,16 @@
+{
+	"name": "com.toolkit.scene",
+	"displayName": "Scene Toolkit",
+	"version": "1.0.0",
+	"unity": "2019.4",
+	"description": "Common components for scene functionality.",
+	"keywords": [
+		"toolkit"
+	],
+	"category": "Toolkit",
+	"dependencies": {},
+	"repository": {
+		"url": "https://github.com/nrvllrgrs/toolkit.scene",
+		"type": "git"
+	}
+}

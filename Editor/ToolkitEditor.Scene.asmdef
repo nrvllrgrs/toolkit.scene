@@ -1,0 +1,20 @@
+{
+    "name": "ToolkitEditor.Scene",
+    "rootNamespace": "",
+    "references": [
+        "GUID:4f6675837be5f1d45a32fb1920bd0217",
+        "GUID:0b2b191acd5ecdb4da1dd2e73cbe1d45",
+        "GUID:f65b075b785f73c4089579a79ee26058"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
