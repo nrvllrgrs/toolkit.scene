@@ -1,11 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor;
 using System.Reflection;
 using System.Linq;
-using UnityEditor.SceneManagement;
 using ToolkitEngine.SceneManagement;
 
 namespace ToolkitEditor.SceneManagement
@@ -13,39 +11,66 @@ namespace ToolkitEditor.SceneManagement
 	[CustomEditor(typeof(SubScene))]
 	public class SubsceneEditor : Editor
 	{
+		#region Fields
+
+		private SubScene m_subscene;
+
 		private static int ObjectsSelected = 0;
+
+		#endregion
+
+		#region Methods
+
+		private void OnEnable()
+		{
+			m_subscene = target as SubScene;
+		}
 
 		public override void OnInspectorGUI()
 		{
 			base.OnInspectorGUI();
-			GUILayout.Space(EditorGUIUtility.singleLineHeight);
-			GUILayout.BeginHorizontal();
-			if (GUILayout.Button("Open"))
-			{
-				SubScene subscene = target as SubScene;
-				subscene.OpenSubscene();
-			}
-			if (GUILayout.Button("Close"))
-			{
-				SubScene subscene = target as SubScene;
-				subscene.CloseSubscene(true);
-			}
 
+			EditorGUILayout.Space();
 
-			GUILayout.EndHorizontal();
+			EditorGUILayout.BeginHorizontal();
+			{
+				if (!m_subscene.IsLoaded)
+				{
+					if (GUILayout.Button("Open"))
+					{
+						m_subscene.OpenSubscene();
+					}
+				}
+				else
+				{
+					if (GUILayout.Button("Close"))
+					{
+						m_subscene.CloseSubscene(true);
+					}
+				}
+
+				EditorGUI.BeginDisabledGroup(!m_subscene.IsLoaded || !SubsceneHierarchyDrawer.IsDirty(m_subscene));
+				{
+					if (GUILayout.Button("Save"))
+					{
+						m_subscene.SaveSubScene();
+					}
+				}
+				EditorGUI.EndDisabledGroup();
+			}
+			EditorGUILayout.EndHorizontal();
 		}
 
-		[MenuItem("GameObject/New Subscene From Selection", false, 10)]
+		[MenuItem("GameObject/Toolkit/Scene/New Subscene From Selection", false, 10)]
 		public static void CreateCustomGameObject(MenuCommand menuCommand)
 		{
 			//Prevent multi-select of objects from executing menuCommand multiple times.
 			if (ObjectsSelected < Selection.transforms.Length)
 			{
 				ObjectsSelected++;
+
 				if (ObjectsSelected < Selection.transforms.Length)
-				{
 					return;
-				}
 			}
 			ObjectsSelected = 0;
 
@@ -64,8 +89,8 @@ namespace ToolkitEditor.SceneManagement
 		{
 			ObjectsSelected = 0;
 
-			EditorSceneManager.sceneLoaded += HandleSceneLoaded;
-			EditorSceneManager.sceneUnloaded += HandleSceneClosed;
+			SceneManager.sceneLoaded += HandleSceneLoaded;
+			SceneManager.sceneUnloaded += HandleSceneClosed;
 		}
 
 		public void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
@@ -85,11 +110,11 @@ namespace ToolkitEditor.SceneManagement
 				EditorApplication.RepaintHierarchyWindow();
 			}
 		}
+
+		#endregion
 	}
 
-#if UNITY_EDITOR
 	[InitializeOnLoad]/// <summary> Sets a background color for game objects in the Hierarchy tab</summary>
-#endif
 	public class SubsceneHierarchyDrawer
 	{
 		private static Vector2 offset = new Vector2(20, 1);
@@ -166,24 +191,21 @@ namespace ToolkitEditor.SceneManagement
 			//Draw the Unity Logo on the subscene Object
 			GUIContent tex = EditorGUIUtility.IconContent("UnityLogo");
 			if (tex != null)
+			{
 				EditorGUI.LabelField(new Rect(selectionRect.position, new Vector2(selectionRect.height, selectionRect.height)), tex);
+			}
 		}
 
-		private static bool IsDirty(SubScene subscene)
+		internal static bool IsDirty(SubScene subscene)
 		{
 			if (EditorUtility.IsDirty(subscene.gameObject.GetInstanceID()))
-			{
 				return true;
-			}
 
 			foreach (Transform t in subscene.GetComponentsInChildren<Transform>())
 			{
 				if (EditorUtility.IsDirty(t))
-				{
 					return true;
-				}
 			}
-
 			return false;
 		}
 
@@ -212,9 +234,8 @@ namespace ToolkitEditor.SceneManagement
 			foreach (Transform child in transformToCount.GetComponentsInChildren<Transform>())
 			{
 				if (child == transformToCount)
-				{
 					continue;
-				}
+				
 				childCount += CountDecendants(child);// add child direct children count.
 			}
 			return childCount;
@@ -250,9 +271,8 @@ namespace ToolkitEditor.SceneManagement
 			var _getExpandedIDs = _sceneHierarchyWindowType.GetMethod("GetExpandedIDs", BindingFlags.NonPublic | BindingFlags.Instance);
 			var _lastInteractedHierarchyWindow = _sceneHierarchyWindowType.GetProperty("lastInteractedHierarchyWindow", BindingFlags.Public | BindingFlags.Static);
 			if (_lastInteractedHierarchyWindow == null)
-			{
 				return false;
-			}
+
 			var _expandedIDs = _getExpandedIDs.Invoke(_lastInteractedHierarchyWindow.GetValue(null), null) as int[];
 
 			// Is expanded?
@@ -269,11 +289,7 @@ namespace ToolkitEditor.SceneManagement
 			);
 
 			GUI.DrawTexture(lineRect, EditorGUIUtility.whiteTexture, ScaleMode.StretchToFill, true, 1, color, Vector4.zero, 0);
-
-			EditorGUI.DrawRect(
-				lineRect,
-				color
-		   );
+			EditorGUI.DrawRect(lineRect, color);
 		}
 
 		private static SubScene SubsceneParent(Transform transform)
@@ -282,9 +298,8 @@ namespace ToolkitEditor.SceneManagement
 			while (trans != null)
 			{
 				if (trans.TryGetComponent<SubScene>(out SubScene s))
-				{
 					return s;
-				}
+
 				trans = trans.parent;
 			}
 			return null;

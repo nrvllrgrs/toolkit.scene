@@ -3,14 +3,19 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
+
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
+#endif
 
 namespace ToolkitEngine.SceneManagement
 {
 	[ExecuteAlways]
 	public class SubScene : MonoBehaviour
 	{
+		#region Fields
+
 		/// <summary>
 		/// The Runtime representation of the Scene Asset. 
 		/// </summary>
@@ -21,7 +26,7 @@ namespace ToolkitEngine.SceneManagement
 		/// The Scene that the SubScene represents.
 		/// </summary>
 		[Tooltip("The Scene that the SubScene represents.")]
-		public SceneAsset SceneAsset;
+		public SceneReference scene;
 
 		/// <summary>
 		/// The SubScene loads on Start if true.
@@ -29,20 +34,18 @@ namespace ToolkitEngine.SceneManagement
 		[Tooltip("The SubScene loads on Start if true.")]
 		public bool AutoLoadScene;
 
+		#endregion
+
+		#region Properties
+
 		/// <summary>
 		/// Returns AssetDatabase.GetAssetPath(SceneAsset);
 		/// </summary>
-		public string EditableScenePath { get { return AssetDatabase.GetAssetPath(SceneAsset); } }
+		public string EditableScenePath => scene.path;
 
 		public Color HierarchyColor = Color.white;
 
-		public bool IsLoaded
-		{
-			get
-			{
-				return EditingScene.isLoaded;
-			}
-		}
+		public bool IsLoaded => EditingScene.isLoaded;
 
 		/// <summary>
 		/// Get a Hash128 GUID from the existing scene asset.
@@ -51,20 +54,22 @@ namespace ToolkitEngine.SceneManagement
 		{
 			get
 			{
-				int data = SceneAsset.GetHashCode();
+				int data = scene.GetHashCode();
 				return Hash128.Compute(ref data);
 			}
 		}
+
+		#endregion
+
+		#region Methods
 
 		public void Start()
 		{
 			if (AutoLoadScene)
 			{
-				this.OpenSubscene();
+				OpenSubscene();
 			}
 		}
-
-
 
 		/// <summary>
 		/// Loads in the Subscene. 
@@ -72,15 +77,18 @@ namespace ToolkitEngine.SceneManagement
 		/// <returns>True if the Scene is open, false otherwise. Remember that scenes are loaded Asynchronously.</returns>
 		public bool OpenSubscene(UnityAction callback = null)
 		{
+			if (!scene.isValidSceneAsset)
+				return false;
+
 			Scene activeScene;
 			if (Application.isPlaying)
 			{
 				activeScene = SceneManager.GetActiveScene();
-				AsyncOperation op = SceneManager.LoadSceneAsync(this.SceneAsset.name, LoadSceneMode.Additive);
+				AsyncOperation op = SceneManager.LoadSceneAsync(scene.name, LoadSceneMode.Additive);
 				op.completed += (x) =>
 				{
 					Debug.Log("Loaded Scene");
-					this.EditingScene = EditorSceneManager.GetSceneByName(this.SceneAsset.name);
+					EditingScene = SceneManager.GetSceneByName(scene.name);
 					LoadSubsceneGameobjects();
 				};
 
@@ -92,20 +100,21 @@ namespace ToolkitEngine.SceneManagement
 					};
 				}
 				SceneManager.SetActiveScene(activeScene);
-
 			}
+#if UNITY_EDITOR
 			else
 			{
-				activeScene = EditorSceneManager.GetActiveScene();
-				this.EditingScene = EditorSceneManager.OpenScene(AssetDatabase.GetAssetOrScenePath(this.SceneAsset), OpenSceneMode.Additive);
+				activeScene = SceneManager.GetActiveScene();
+				EditingScene = EditorSceneManager.OpenScene(scene.path, OpenSceneMode.Additive);
 				LoadSubsceneGameobjects();
 				EditorUtility.SetDirty(this.gameObject);
 
-				EditorSceneManager.SetActiveScene(activeScene);
+				SceneManager.SetActiveScene(activeScene);
 			}
+#endif
 
-			this.EditingScene.isSubScene = true;
-			return this.IsLoaded;
+			EditingScene.isSubScene = true;
+			return IsLoaded;
 		}
 
 		/// <summary>
@@ -114,8 +123,8 @@ namespace ToolkitEngine.SceneManagement
 		/// <returns>True if the EditingScene reference is not null, false if it is null.</returns>
 		public bool ReconnectEditingScene()
 		{
-			this.EditingScene = EditorSceneManager.GetSceneByName(this.SceneAsset.name);
-			return this.EditingScene.name == this.SceneAsset.name && this.EditingScene.IsValid();
+			EditingScene = SceneManager.GetSceneByName(scene.name);
+			return EditingScene.name == scene.name && EditingScene.IsValid();
 		}
 
 		/// <summary>
@@ -125,44 +134,33 @@ namespace ToolkitEngine.SceneManagement
 		/// <returns>True if the subscene is closed. False otherwise.</returns>
 		public bool CloseSubscene(bool SaveSubsceneOnClose)
 		{
-			if (!this.IsLoaded)
+			if (!IsLoaded)
 			{
 				return true;
 			}
 			UnloadSubsceneGameobjects();
 
-			if ((Application.isPlaying || EditorApplication.isPlaying))
+			if (Application.isPlaying)
 			{
-				AsyncOperation op = SceneManager.UnloadSceneAsync(this.EditingScene);
+				AsyncOperation op = SceneManager.UnloadSceneAsync(EditingScene);
 				op.completed += (x) =>
 				{
 					Debug.Log("Scene Unloaded");
 				};
 
 			}
+#if UNITY_EDITOR
 			else
 			{
 				if (SaveSubsceneOnClose)
 				{
 					SaveSubScene();
 				}
-				EditorUtility.SetDirty(this.gameObject);
-				EditorSceneManager.CloseScene(this.EditingScene, true);
+				EditorUtility.SetDirty(gameObject);
+				EditorSceneManager.CloseScene(EditingScene, true);
 			}
-			return !this.IsLoaded;
-		}
-
-		/// <summary>
-		/// Saves the scene represented by the subscene.
-		/// </summary>
-		/// <returns></returns>
-		public bool SaveSubScene()
-		{
-			if (Application.isPlaying)
-			{
-				return false;
-			}
-			return EditorSceneManager.SaveScene(this.EditingScene);
+#endif
+			return !IsLoaded;
 		}
 
 		/// <summary>
@@ -177,10 +175,10 @@ namespace ToolkitEngine.SceneManagement
 			}
 
 			GameObject[] gameobjects = EditingScene.GetRootGameObjects();
-			foreach (GameObject g in gameobjects)
+			foreach (GameObject obj in gameobjects)
 			{
-				EditorSceneManager.MoveGameObjectToScene(g, gameObject.scene);
-				g.transform.SetParent(this.transform);
+				SceneManager.MoveGameObjectToScene(obj, gameObject.scene);
+				obj.transform.SetParent(transform);
 			}
 
 
@@ -192,19 +190,47 @@ namespace ToolkitEngine.SceneManagement
 		private void UnloadSubsceneGameobjects()
 		{
 			if (EditingScene == null || !EditingScene.isLoaded)
+				return;
+
+			foreach (Transform child in GetComponentsInChildren<Transform>())
 			{
+				if (child == transform || child.parent != transform)
+					continue;
+
+				child.SetParent(null);
+				SceneManager.MoveGameObjectToScene(child.gameObject, EditingScene);
+			}
+		}
+
+		// Close the scene if the gameobject is destroyed so there isn't an unaccounted for Scene open in the hierarchy.
+		// By default, save the subscene if working in the editor.
+		public void OnDestroy()
+		{
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				CloseSubscene(true);
 				return;
 			}
+#endif
+			CloseSubscene(false);
+		}
 
-			foreach (Transform child in this.GetComponentsInChildren<Transform>())
-			{
-				if (child == this.transform || child.parent != this.transform)
-				{
-					continue;
-				}
-				child.SetParent(null);
-				EditorSceneManager.MoveGameObjectToScene(child.gameObject, EditingScene);
-			}
+		#endregion
+
+		#region Editor-Only
+#if UNITY_EDITOR
+
+		/// <summary>
+		/// Saves the scene represented by the subscene.
+		/// </summary>
+		/// <returns></returns>
+		public bool SaveSubScene()
+		{
+			if (Application.isPlaying)
+				return false;
+
+			return EditorSceneManager.SaveScene(EditingScene);
 		}
 
 		/// <summary>
@@ -267,7 +293,7 @@ namespace ToolkitEngine.SceneManagement
 			/*Create a new scene and scene asset. If you want to change the
 			default subscene location yourself, you can just change this path.*/
 			string path = "Assets/Scenes/Subscenes/" + sceneAssetName + ".unity";
-			Scene activeScene = EditorSceneManager.GetActiveScene();
+			Scene activeScene = SceneManager.GetActiveScene();
 			path = AssetDatabase.GenerateUniqueAssetPath(path);
 			int indexOfName = path.LastIndexOf('/') + 1;
 			string sceneName = path.Substring(indexOfName, path.Length - indexOfName - ".unity".Length);
@@ -276,7 +302,7 @@ namespace ToolkitEngine.SceneManagement
 
 			/*You have to set the original active scene as the active scene so that 
 			instantiated objects are spawned in the current scene*/
-			EditorSceneManager.SetActiveScene(activeScene);
+			SceneManager.SetActiveScene(activeScene);
 			//Move the gameobject to the new scene
 			foreach (GameObject rootObject in subSceneRootObjects)
 			{
@@ -290,7 +316,7 @@ namespace ToolkitEngine.SceneManagement
 			GameObject subSceneGO = new GameObject(scene.name);
 			SubScene subScene = subSceneGO.AddComponent<SubScene>();
 			subScene.AutoLoadScene = false;
-			subScene.SceneAsset = sceneAsset;
+			subScene.scene.path = AssetDatabase.GetAssetPath(sceneAsset);
 			subScene.EditingScene = scene;
 
 			/*Get the list of scenes in the Editor Build Settings, Add the new scene to 
@@ -312,21 +338,10 @@ namespace ToolkitEngine.SceneManagement
 		//This method is for changing the Hierarchy color. Repainting the hierarchy window allows you to see the color change immediately.
 		public void OnValidate()
 		{
-#if UNITY_EDITOR
 			EditorApplication.RepaintHierarchyWindow();
-#endif
 		}
 
-		//Close the scene if the gameobject is destroyed so there isn't an unaccounted for Scene open in the hierarchy. By default, save the subscene if working in the editor.
-		public void OnDestroy()
-		{
-#if UNITY_EDITOR
-			this.CloseSubscene(true);
 #endif
-			if (Application.isPlaying)
-			{
-				this.CloseSubscene(false);
-			}
-		}
+		#endregion
 	}
 }
