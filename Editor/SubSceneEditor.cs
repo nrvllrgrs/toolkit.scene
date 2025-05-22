@@ -50,9 +50,10 @@ namespace ToolkitEditor.SceneManagement
 
 					EditorGUI.BeginDisabledGroup(!m_subscene.IsDirty());
 					{
-						if (GUILayout.Button("Close And Save"))
+						if (GUILayout.Button("Revert"))
 						{
-							m_subscene.CloseSubscene(true);
+							m_subscene.CloseSubscene(false, true);
+							m_subscene.OpenSubscene();
 						}
 						if (GUILayout.Button("Save"))
 						{

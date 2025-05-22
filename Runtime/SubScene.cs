@@ -130,9 +130,9 @@ namespace ToolkitEngine.SceneManagement
 		/// <summary>
 		/// Closes the Subscene.
 		/// </summary>
-		/// <param name="SaveSubsceneOnClose"></param>
+		/// <param name="saveSubsceneOnClose"></param>
 		/// <returns>True if the subscene is closed. False otherwise.</returns>
-		public bool CloseSubscene(bool SaveSubsceneOnClose)
+		public bool CloseSubscene(bool saveSubsceneOnClose, bool skipPrompt = false)
 		{
 			if (!IsLoaded)
 				return true;
@@ -153,20 +153,20 @@ namespace ToolkitEngine.SceneManagement
 			{
 				if (dirty)
 				{
-					if (SaveSubsceneOnClose || EditorUtility.DisplayDialog(
+					if (saveSubsceneOnClose || (!skipPrompt && EditorUtility.DisplayDialog(
 						"Subscene Has Been Modified",
 						$"Do you want to save the changes you made in the subscene:\n {name}\n\nYour changes will be lost if you don't save them.",
 						"Save",
-						"Don't Save"))
+						"Don't Save")))
 					{
 						SaveSubScene();
 					}
 				}
 
+				ClearDirty();
 				EditorSceneManager.CloseScene(EditingScene, true);
 			}
 #endif
-			ClearDirty();
 			return !IsLoaded;
 		}
 
