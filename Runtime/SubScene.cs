@@ -89,7 +89,7 @@ namespace ToolkitEngine.SceneManagement
 				{
 					Debug.Log("Loaded Scene");
 					EditingScene = SceneManager.GetSceneByName(scene.name);
-					LoadSubsceneGameobjects();
+					LoadSubsceneGameObjects();
 				};
 
 				if (callback != null)
@@ -106,8 +106,8 @@ namespace ToolkitEngine.SceneManagement
 			{
 				activeScene = SceneManager.GetActiveScene();
 				EditingScene = EditorSceneManager.OpenScene(scene.path, OpenSceneMode.Additive);
-				LoadSubsceneGameobjects();
-				EditorUtility.SetDirty(this.gameObject);
+				LoadSubsceneGameObjects();
+				ClearDirty();
 
 				SceneManager.SetActiveScene(activeScene);
 			}
@@ -135,10 +135,10 @@ namespace ToolkitEngine.SceneManagement
 		public bool CloseSubscene(bool SaveSubsceneOnClose)
 		{
 			if (!IsLoaded)
-			{
 				return true;
-			}
-			UnloadSubsceneGameobjects();
+
+			bool dirty = IsDirty();
+			UnloadSubsceneGameObjects();
 
 			if (Application.isPlaying)
 			{
@@ -147,26 +147,33 @@ namespace ToolkitEngine.SceneManagement
 				{
 					Debug.Log("Scene Unloaded");
 				};
-
 			}
 #if UNITY_EDITOR
 			else
 			{
-				if (SaveSubsceneOnClose)
+				if (dirty)
 				{
-					SaveSubScene();
+					if (SaveSubsceneOnClose || EditorUtility.DisplayDialog(
+						"Subscene Has Been Modified",
+						$"Do you want to save the changes you made in the subscene:\n {name}\n\nYour changes will be lost if you don't save them.",
+						"Save",
+						"Don't Save"))
+					{
+						SaveSubScene();
+					}
 				}
-				EditorUtility.SetDirty(gameObject);
+
 				EditorSceneManager.CloseScene(EditingScene, true);
 			}
 #endif
+			ClearDirty();
 			return !IsLoaded;
 		}
 
 		/// <summary>
 		/// Move all of the Gameobjects in the subscene to the active scene, and parent them to the Subscene Object.
 		/// </summary>
-		private void LoadSubsceneGameobjects()
+		private void LoadSubsceneGameObjects()
 		{
 			if (EditingScene == null || !EditingScene.isLoaded)
 			{
@@ -179,15 +186,15 @@ namespace ToolkitEngine.SceneManagement
 			{
 				SceneManager.MoveGameObjectToScene(obj, gameObject.scene);
 				obj.transform.SetParent(transform);
+				obj.hideFlags |= HideFlags.DontSave;
 			}
-
 
 #if UNITY_EDITOR
 			EditorApplication.RepaintHierarchyWindow();
 #endif
 		}
 
-		private void UnloadSubsceneGameobjects()
+		private void UnloadSubsceneGameObjects()
 		{
 			if (EditingScene == null || !EditingScene.isLoaded)
 				return;
@@ -197,6 +204,7 @@ namespace ToolkitEngine.SceneManagement
 				if (child == transform || child.parent != transform)
 					continue;
 
+				child.gameObject.hideFlags &= ~HideFlags.DontSave;
 				child.SetParent(null);
 				SceneManager.MoveGameObjectToScene(child.gameObject, EditingScene);
 			}
@@ -230,7 +238,45 @@ namespace ToolkitEngine.SceneManagement
 			if (Application.isPlaying)
 				return false;
 
-			return EditorSceneManager.SaveScene(EditingScene);
+			if (!IsDirty())
+				return false;
+
+			// Move gameObjects back to subscene before saving
+			UnloadSubsceneGameObjects();
+
+			bool saved = EditorSceneManager.SaveScene(EditingScene);
+
+			// Move gameObjects to scene after saving
+			LoadSubsceneGameObjects();
+
+			if (saved)
+			{
+				ClearDirty();
+			}
+			return saved;
+		}
+
+		public void ClearDirty()
+		{
+			EditorUtility.ClearDirty(gameObject);
+
+			foreach (var t in GetComponentsInChildren<Transform>())
+			{
+				EditorUtility.ClearDirty(t);
+			}
+		}
+
+		public bool IsDirty()
+		{
+			if (EditorUtility.IsDirty(gameObject.GetInstanceID()))
+				return true;
+
+			foreach (Transform t in GetComponentsInChildren<Transform>())
+			{
+				if (EditorUtility.IsDirty(t))
+					return true;
+			}
+			return false;
 		}
 
 		/// <summary>
@@ -240,10 +286,10 @@ namespace ToolkitEngine.SceneManagement
 		/// <param name="sceneAssetName">The name of the Scene Asset created for the SubScene.</param>
 		/// <param name="closeSubsceneOnCreation">Closes the SubScene after Creation if true.</param>
 		/// <returns>The new SubScene with the subSceneRootObject as a scene root object.</returns>
-		public static SubScene CreateSubsceneFromGameobject(GameObject subSceneRootObject, string sceneAssetName, bool closeSubsceneOnCreation = false)
+		public static SubScene CreateSubsceneFromGameObject(GameObject subSceneRootObject, string sceneAssetName, bool closeSubsceneOnCreation = false)
 		{
 			GameObject[] rootObjects = new GameObject[] { subSceneRootObject };
-			return CreateSubsceneFromGameobjects(rootObjects, sceneAssetName, closeSubsceneOnCreation);
+			return CreateSubsceneFromGameObjects(rootObjects, sceneAssetName, closeSubsceneOnCreation);
 		}
 
 
@@ -256,7 +302,7 @@ namespace ToolkitEngine.SceneManagement
 		public static SubScene CreateEmptySubscene(string sceneAssetName, bool closeSubsceneOnCreation = false)
 		{
 			//Just pass in an empty list of gameobjects to move to the new Scene
-			return CreateSubsceneFromGameobjects(new List<GameObject>(), sceneAssetName, closeSubsceneOnCreation);
+			return CreateSubsceneFromGameObjects(new List<GameObject>(), sceneAssetName, closeSubsceneOnCreation);
 		}
 
 		/// <summary>
@@ -266,9 +312,9 @@ namespace ToolkitEngine.SceneManagement
 		/// <param name="sceneAssetName">The name of the Scene Asset created for the SubScene.</param>
 		/// <param name="closeSubsceneOnCreation">Closes the SubScene after Creation if true.</param>
 		/// <returns>The new SubScene with the subSceneRootObjects as scene root object.</returns>
-		public static SubScene CreateSubsceneFromGameobjects(List<GameObject> subSceneRootObjects, string sceneAssetName, bool closeSubsceneOnCreation = false)
+		public static SubScene CreateSubsceneFromGameObjects(List<GameObject> subSceneRootObjects, string sceneAssetName, bool closeSubsceneOnCreation = false)
 		{
-			return CreateSubsceneFromGameobjects(subSceneRootObjects.ToArray(), sceneAssetName, closeSubsceneOnCreation);
+			return CreateSubsceneFromGameObjects(subSceneRootObjects.ToArray(), sceneAssetName, closeSubsceneOnCreation);
 		}
 
 		/// <summary>
@@ -278,7 +324,7 @@ namespace ToolkitEngine.SceneManagement
 		/// <param name="sceneAssetName">The name of the Scene Asset created for the SubScene.</param>
 		/// <param name="closeSubsceneOnCreation">Closes the SubScene after Creation if true.</param>
 		/// <returns>The new SubScene with the subSceneRootObjects as scene root object.</returns>
-		public static SubScene CreateSubsceneFromGameobjects(GameObject[] subSceneRootObjects, string sceneAssetName, bool closeSubsceneOnCreation = false)
+		public static SubScene CreateSubsceneFromGameObjects(GameObject[] subSceneRootObjects, string sceneAssetName, bool closeSubsceneOnCreation = false)
 		{
 			//Create the proper path for the scenes if it does not already exist.
 			if (!AssetDatabase.IsValidFolder("Assets/Scenes/"))

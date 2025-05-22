@@ -45,15 +45,19 @@ namespace ToolkitEditor.SceneManagement
 				{
 					if (GUILayout.Button("Close"))
 					{
-						m_subscene.CloseSubscene(true);
+						m_subscene.CloseSubscene(false);
 					}
-				}
 
-				EditorGUI.BeginDisabledGroup(!m_subscene.IsLoaded || !SubsceneHierarchyDrawer.IsDirty(m_subscene));
-				{
-					if (GUILayout.Button("Save"))
+					EditorGUI.BeginDisabledGroup(!m_subscene.IsDirty());
 					{
-						m_subscene.SaveSubScene();
+						if (GUILayout.Button("Close And Save"))
+						{
+							m_subscene.CloseSubscene(true);
+						}
+						if (GUILayout.Button("Save"))
+						{
+							m_subscene.SaveSubScene();
+						}
 					}
 				}
 				EditorGUI.EndDisabledGroup();
@@ -81,7 +85,7 @@ namespace ToolkitEditor.SceneManagement
 			{
 				gameObjectsForSubscene.Add(selectionTransforms[i].gameObject);
 			}
-			SubScene.CreateSubsceneFromGameobjects(gameObjectsForSubscene, "New SubScene");
+			SubScene.CreateSubsceneFromGameObjects(gameObjectsForSubscene, "New SubScene");
 		}
 
 		[InitializeOnLoadMethod]
@@ -154,8 +158,6 @@ namespace ToolkitEditor.SceneManagement
 								SetExpanded(subscene.gameObject, newIsExpanded);
 							}
 						}
-
-
 					}
 
 					SubScene parent = SubsceneParent((obj as GameObject).transform);
@@ -178,7 +180,7 @@ namespace ToolkitEditor.SceneManagement
 			EditorGUI.DrawRect(bgRect, backgroundColor);
 			//Bold Title
 			string name = obj.name;
-			if (IsDirty(subScene))
+			if (subScene.IsDirty())
 			{
 				name += "*";
 			}
@@ -196,19 +198,6 @@ namespace ToolkitEditor.SceneManagement
 			}
 		}
 
-		internal static bool IsDirty(SubScene subscene)
-		{
-			if (EditorUtility.IsDirty(subscene.gameObject.GetInstanceID()))
-				return true;
-
-			foreach (Transform t in subscene.GetComponentsInChildren<Transform>())
-			{
-				if (EditorUtility.IsDirty(t))
-					return true;
-			}
-			return false;
-		}
-
 		private static void DrawToggle(Rect selectionRect, SubScene subscene, Object obj)
 		{
 			bool newLoaded = GUI.Toggle(new Rect(selectionRect.xMax - selectionRect.height, selectionRect.yMin, selectionRect.height, selectionRect.height), subscene.IsLoaded, "");
@@ -217,7 +206,7 @@ namespace ToolkitEditor.SceneManagement
 				if (subscene.IsLoaded && !newLoaded)
 				{
 					SetExpanded(obj, false);
-					subscene.CloseSubscene(true);
+					subscene.CloseSubscene(false);
 				}
 				else if (!subscene.IsLoaded && newLoaded)
 				{
