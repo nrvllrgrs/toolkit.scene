@@ -52,16 +52,12 @@ namespace ToolkitEditor.SceneManagement
 			// Move this up
 			EditorGUI.BeginProperty(position, GUIContent.none, property);
 			{
-				//// Here we add the foldout using a single line height, the label and change
-				//// the value of property.isExpanded
-				//property.isExpanded = EditorGUI.Foldout(new Rect(position.x, position.y, position.width, lineHeight), property.isExpanded, label);
-
 				var sceneAssetProp = GetSceneAssetProperty(property);
 				var sceneControlID = GUIUtility.GetControlID(FocusType.Passive);
 
 				EditorGUI.BeginChangeCheck();
 				{
-					EditorGUIRectLayout.ObjectField<SceneAsset>(ref position, sceneAssetProp);
+					EditorGUIRectLayout.ObjectField<SceneAsset>(ref position, sceneAssetProp, label);
 				}
 				var buildScene = BuildUtils.GetBuildScene(sceneAssetProp.objectReferenceValue);
 				if (EditorGUI.EndChangeCheck())
