@@ -63,6 +63,16 @@ namespace ToolkitEngine.SceneManagement
 
 		#region Methods
 
+		private void Awake()
+		{
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				EditorApplication.playModeStateChanged += EditorApplication_PlayModeStateChanged;
+			}
+#endif
+		}
+
 		public void Start()
 		{
 			if (AutoLoadScene)
@@ -217,7 +227,7 @@ namespace ToolkitEngine.SceneManagement
 #if UNITY_EDITOR
 			if (!Application.isPlaying)
 			{
-				CloseSubscene(true);
+				EditorApplication.playModeStateChanged -= EditorApplication_PlayModeStateChanged;
 				return;
 			}
 #endif
@@ -385,6 +395,16 @@ namespace ToolkitEngine.SceneManagement
 		public void OnValidate()
 		{
 			EditorApplication.RepaintHierarchyWindow();
+		}
+
+		private void EditorApplication_PlayModeStateChanged(PlayModeStateChange stateChange)
+		{
+			switch (stateChange)
+			{
+				case PlayModeStateChange.ExitingEditMode:
+					CloseSubscene(false, true);
+					break;
+			}
 		}
 
 #endif
