@@ -87,8 +87,11 @@ namespace ToolkitEngine.SceneManagement
 		/// <returns>True if the Scene is open, false otherwise. Remember that scenes are loaded Asynchronously.</returns>
 		public bool OpenSubscene(UnityAction callback = null)
 		{
+#if UNITY_EDITOR
 			if (!scene.isValidSceneAsset)
 				return false;
+
+#endif
 
 			Scene activeScene;
 			if (Application.isPlaying)
@@ -147,7 +150,10 @@ namespace ToolkitEngine.SceneManagement
 			if (!IsLoaded)
 				return true;
 
+#if UNITY_EDITOR
 			bool dirty = IsDirty();
+#endif
+
 			UnloadSubsceneGameObjects();
 
 			if (Application.isPlaying)
@@ -209,7 +215,7 @@ namespace ToolkitEngine.SceneManagement
 			if (EditingScene == null || !EditingScene.isLoaded)
 				return;
 
-			foreach (Transform child in GetComponentsInChildren<Transform>())
+			foreach (Transform child in GetComponentsInChildren<Transform>(true))
 			{
 				if (child == transform || child.parent != transform)
 					continue;
@@ -234,7 +240,7 @@ namespace ToolkitEngine.SceneManagement
 			CloseSubscene(false);
 		}
 
-		#endregion
+#endregion
 
 		#region Editor-Only
 #if UNITY_EDITOR
@@ -408,6 +414,6 @@ namespace ToolkitEngine.SceneManagement
 		}
 
 #endif
-		#endregion
+#endregion
 	}
 }
