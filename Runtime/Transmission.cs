@@ -7,7 +7,13 @@ namespace ToolkitEngine.SceneManagement
     {
 		#region Fields
 
-		internal Action Transmitted;
+		public Action Transmitted;
+
+		#endregion
+
+		#region Methods
+
+		public void InvokeTransmitted() => Transmitted?.Invoke();
 
 		#endregion
 	}

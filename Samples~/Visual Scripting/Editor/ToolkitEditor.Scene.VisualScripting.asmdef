@@ -1,0 +1,29 @@
+{
+    "name": "ToolkitEditor.Scene.VisualScripting",
+    "rootNamespace": "",
+    "references": [
+        "ToolkitEngine",
+        "ToolkitEditor",
+        "ToolkitEngine.Scene",
+        "ToolkitEngine.VisualScripting",
+        "ToolkitEditor.VisualScripting",
+        "ToolkitEngine.Scene.VisualScripting",
+        "Unity.VisualScripting.Core",
+        "Unity.VisualScripting.Core.Editor",
+        "Unity.VisualScripting.Flow",
+        "Unity.VisualScripting.Flow.Editor",
+        "Unity.VisualScripting.State",
+        "Unity.VisualScripting.State.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -3,6 +3,8 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
+using Cysharp.Threading.Tasks;
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -85,7 +87,7 @@ namespace ToolkitEngine.SceneManagement
 		/// Loads in the Subscene. 
 		/// </summary>
 		/// <returns>True if the Scene is open, false otherwise. Remember that scenes are loaded Asynchronously.</returns>
-		public bool OpenSubscene(UnityAction callback = null)
+		public async UniTask<bool> OpenSubscene(UnityAction callback = null)
 		{
 #if UNITY_EDITOR
 			if (!scene.isValidSceneAsset)
@@ -97,21 +99,13 @@ namespace ToolkitEngine.SceneManagement
 			if (Application.isPlaying)
 			{
 				activeScene = SceneManager.GetActiveScene();
-				AsyncOperation op = SceneManager.LoadSceneAsync(scene.name, LoadSceneMode.Additive);
-				op.completed += (x) =>
-				{
-					Debug.Log("Loaded Scene");
-					EditingScene = SceneManager.GetSceneByName(scene.name);
-					LoadSubsceneGameObjects();
-				};
+				await SceneManager.LoadSceneAsync(scene.name, LoadSceneMode.Additive);
+				Debug.Log("Loaded Scene");
 
-				if (callback != null)
-				{
-					op.completed += (x) =>
-					{
-						callback();
-					};
-				}
+				EditingScene = SceneManager.GetSceneByName(scene.name);
+				LoadSubsceneGameObjects();
+				callback?.Invoke();
+
 				SceneManager.SetActiveScene(activeScene);
 			}
 #if UNITY_EDITOR
@@ -145,7 +139,7 @@ namespace ToolkitEngine.SceneManagement
 		/// </summary>
 		/// <param name="saveSubsceneOnClose"></param>
 		/// <returns>True if the subscene is closed. False otherwise.</returns>
-		public bool CloseSubscene(bool saveSubsceneOnClose, bool skipPrompt = false)
+		public async UniTask<bool> CloseSubscene(bool saveSubsceneOnClose, bool skipPrompt = false)
 		{
 			if (!IsLoaded)
 				return true;
@@ -158,11 +152,8 @@ namespace ToolkitEngine.SceneManagement
 
 			if (Application.isPlaying)
 			{
-				AsyncOperation op = SceneManager.UnloadSceneAsync(EditingScene);
-				op.completed += (x) =>
-				{
-					Debug.Log("Scene Unloaded");
-				};
+				await SceneManager.UnloadSceneAsync(EditingScene);
+				Debug.Log("Scene Unloaded");
 			}
 #if UNITY_EDITOR
 			else
@@ -240,7 +231,7 @@ namespace ToolkitEngine.SceneManagement
 			CloseSubscene(false);
 		}
 
-#endregion
+		#endregion
 
 		#region Editor-Only
 #if UNITY_EDITOR
@@ -414,6 +405,6 @@ namespace ToolkitEngine.SceneManagement
 		}
 
 #endif
-#endregion
+		#endregion
 	}
 }

@@ -34,7 +34,7 @@ namespace ToolkitEditor.SceneManagement
 
 			m_reorderableList.drawElementCallback += (rect, index, isActive, isFocused) =>
 			{
-				if (!index.Between(0, m_collection.transmissionList.Count - 1))
+				if (!index.Between(0, m_collection.transmissionList.Count))
 					return;
 
 				var transmissionProp = m_transmissions.GetArrayElementAtIndex(index);
@@ -87,7 +87,7 @@ namespace ToolkitEditor.SceneManagement
 
 		private float ElementHeightCallback(int index)
 		{
-			if (!index.Between(0, m_collection.transmissionList.Count - 1))
+			if (!index.Between(0, m_collection.transmissionList.Count))
 				return 0f;
 
 			var transmissionProp = m_transmissions.GetArrayElementAtIndex(index);

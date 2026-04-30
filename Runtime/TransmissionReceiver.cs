@@ -24,11 +24,17 @@ namespace ToolkitEngine.SceneManagement
 
 		private void OnEnable()
 		{
+			if (m_transmission == null)
+				return;
+
 			m_transmission.Transmitted += Transmitted;
 		}
 
 		private void OnDisable()
 		{
+			if (m_transmission == null)
+				return;
+
 			m_transmission.Transmitted -= Transmitted;
 		}
 

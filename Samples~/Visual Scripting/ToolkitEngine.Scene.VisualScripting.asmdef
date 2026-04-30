@@ -1,15 +1,15 @@
 {
-    "name": "ToolkitEditor.Scene",
+    "name": "ToolkitEngine.Scene.VisualScripting",
     "rootNamespace": "",
     "references": [
-        "GUID:4f6675837be5f1d45a32fb1920bd0217",
-        "GUID:0b2b191acd5ecdb4da1dd2e73cbe1d45",
-        "GUID:f65b075b785f73c4089579a79ee26058",
-        "GUID:f51ebe6a0ceec4240a699833d6309b23"
+        "ToolkitEngine",
+        "ToolkitEngine.Scene",
+        "ToolkitEngine.VisualScripting",
+        "Unity.InputSystem",
+        "Unity.VisualScripting.Core",
+        "Unity.VisualScripting.Flow"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

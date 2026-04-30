@@ -17,7 +17,7 @@ namespace ToolkitEngine.SceneManagement
 		[ContextMenu("Transmit")]
 		public void Transmit()
 		{
-			m_transmission?.Transmitted?.Invoke();
+			m_transmission?.InvokeTransmitted();
 		}
 
 		#endregion

@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Linq;
 using ToolkitEngine.SceneManagement;
 
+using SceneManager = ToolkitEngine.SceneManagement.SceneManager;
+
 namespace ToolkitEditor.SceneManagement
 {
 	[CustomEditor(typeof(SubScene))]
@@ -89,33 +91,6 @@ namespace ToolkitEditor.SceneManagement
 			SubScene.CreateSubsceneFromGameObjects(gameObjectsForSubscene, "New SubScene");
 		}
 
-		[InitializeOnLoadMethod]
-		public void Initialize()
-		{
-			ObjectsSelected = 0;
-
-			SceneManager.sceneLoaded += HandleSceneLoaded;
-			SceneManager.sceneUnloaded += HandleSceneClosed;
-		}
-
-		public void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
-		{
-			SubScene s = target as SubScene;
-			if (s.EditingScene == scene)
-			{
-				EditorApplication.RepaintHierarchyWindow();
-			}
-		}
-
-		public void HandleSceneClosed(Scene scene)
-		{
-			SubScene s = target as SubScene;
-			if (s.EditingScene == scene)
-			{
-				EditorApplication.RepaintHierarchyWindow();
-			}
-		}
-
 		#endregion
 	}
 
@@ -128,6 +103,18 @@ namespace ToolkitEditor.SceneManagement
 		static SubsceneHierarchyDrawer()
 		{
 			EditorApplication.hierarchyWindowItemOnGUI += HandleHierarchyWindowItemOnGUI;
+			SceneManager.SceneLoaded += HandleSceneLoaded;
+			SceneManager.SceneUnloaded += HandleSceneClosed;
+		}
+
+		private static void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
+		{
+			EditorApplication.RepaintHierarchyWindow();
+		}
+
+		private static void HandleSceneClosed(Scene scene)
+		{
+			EditorApplication.RepaintHierarchyWindow();
 		}
 
 		private static void HandleHierarchyWindowItemOnGUI(int instanceID, Rect selectionRect)
@@ -199,7 +186,7 @@ namespace ToolkitEditor.SceneManagement
 			}
 		}
 
-		private static void DrawToggle(Rect selectionRect, SubScene subscene, Object obj)
+		private static async void DrawToggle(Rect selectionRect, SubScene subscene, Object obj)
 		{
 			bool newLoaded = GUI.Toggle(new Rect(selectionRect.xMax - selectionRect.height, selectionRect.yMin, selectionRect.height, selectionRect.height), subscene.IsLoaded, "");
 			if (newLoaded != subscene.IsLoaded)
@@ -207,11 +194,11 @@ namespace ToolkitEditor.SceneManagement
 				if (subscene.IsLoaded && !newLoaded)
 				{
 					SetExpanded(obj, false);
-					subscene.CloseSubscene(false);
+					await subscene.CloseSubscene(false);
 				}
 				else if (!subscene.IsLoaded && newLoaded)
 				{
-					subscene.OpenSubscene();
+					await subscene.OpenSubscene();
 				}
 
 				EditorApplication.RepaintHierarchyWindow();
@@ -241,7 +228,15 @@ namespace ToolkitEditor.SceneManagement
 			object sceneHierarchy = GetHierarchyWindowType().GetProperty("sceneHierarchy").GetValue(GetHierarchyWindow());
 			var methodInfo = sceneHierarchy.GetType().GetMethod("ExpandTreeViewItem", BindingFlags.NonPublic | BindingFlags.Instance);
 
-			methodInfo.Invoke(sceneHierarchy, new object[] { obj.GetInstanceID(), expand });
+			var entityIdType = typeof(EntityId);
+			var entityId = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(entityIdType);
+			var field = entityIdType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public).FirstOrDefault();
+
+			if (field != null)
+			{
+				field.SetValue(entityId, obj.GetInstanceID());
+			}
+			methodInfo.Invoke(sceneHierarchy, new object[] { entityId, expand });
 		}
 
 		static System.Type GetHierarchyWindowType()
@@ -259,13 +254,15 @@ namespace ToolkitEditor.SceneManagement
 		{
 			var _sceneHierarchyWindowType = typeof(EditorWindow).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
 			var _getExpandedIDs = _sceneHierarchyWindowType.GetMethod("GetExpandedIDs", BindingFlags.NonPublic | BindingFlags.Instance);
+
 			var _lastInteractedHierarchyWindow = _sceneHierarchyWindowType.GetProperty("lastInteractedHierarchyWindow", BindingFlags.Public | BindingFlags.Static);
 			if (_lastInteractedHierarchyWindow == null)
 				return false;
 
 			var _expandedIDs = _getExpandedIDs.Invoke(_lastInteractedHierarchyWindow.GetValue(null), null) as int[];
+			if (_expandedIDs == null)
+				return false;
 
-			// Is expanded?
 			return _expandedIDs.Contains(ob.GetInstanceID());
 		}
 
